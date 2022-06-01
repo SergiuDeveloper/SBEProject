@@ -1,9 +1,8 @@
 package model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 
-import java.util.Date;
+import java.util.List;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -13,10 +12,17 @@ import java.util.Date;
 @ToString
 public class Subscription {
 
-    private String company;
-    @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy/MM/dd")
-    private Date date;
-    private double value;
-    private double drop;
-    private double variation;
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Builder
+    @Getter
+    @Setter
+    @ToString
+    public static class Condition {
+        private String field;
+        private String operator;
+        private String value;
+    }
+
+    private List<Condition> conditions;
 }

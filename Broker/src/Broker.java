@@ -196,6 +196,7 @@ public abstract class Broker<Pub, Sub> {
                         Sub subscription;
                         try {
                             String serializedSubscription = subscriberIn.readLine();
+                            System.out.println(serializedSubscription);
                             subscription = new ObjectMapper().readValue(serializedSubscription, this.subClass);
                         } catch (IOException e) {
                             e.printStackTrace();
