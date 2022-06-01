@@ -102,7 +102,6 @@ def handle_broker(conn, addr):
         request = request.strip()
         request_parts = request.split()
         brokers_network_table_lock.acquire()
-        print(REGISTER_BROKER)
         if request_parts[0] == REGISTER_BROKER:
             if len(request_parts) < 3:
                 brokers_network_table_lock.release()
@@ -129,7 +128,8 @@ def handle_publisher(conn, addr):
     publishers_round_robin_index_lock.acquire()
     broker_key = list(brokers_network_table.keys())[publishers_round_robin_index]
     broker_host = broker_key[0]
-    broker_port = brokers_network_table[broker_key][1]
+    broker_port = brokers_network_table[broker_key]['ports'][1]
+    publishers_round_robin_index += 1
     publishers_round_robin_index_lock.release()
     brokers_network_table_lock.release()
     
@@ -137,6 +137,8 @@ def handle_publisher(conn, addr):
     conn_file.write('{}\n'.format(broker_host))
     conn_file.write('{}\n'.format(broker_port))
     conn_file.flush()
+    
+    conn.close()
 
 def handle_subscriber(conn, addr):
     global subscribers_round_robin_index, subscribers_round_robin_index_lock
@@ -151,7 +153,8 @@ def handle_subscriber(conn, addr):
     subscribers_round_robin_index_lock.acquire()
     broker_key = list(brokers_network_table.keys())[subscribers_round_robin_index]
     broker_host = broker_key[0]
-    broker_port = brokers_network_table[broker_key][2]
+    broker_port = brokers_network_table[broker_key]['ports'][2]
+    subscribers_round_robin_index += 1
     subscribers_round_robin_index_lock.release()
     brokers_network_table_lock.release()
     
@@ -159,6 +162,8 @@ def handle_subscriber(conn, addr):
     conn_file.write('{}\n'.format(broker_host))
     conn_file.write('{}\n'.format(broker_port))
     conn_file.flush()
+    
+    conn.close()
     
 def select_optimal_peer(brokers_network_table):
     for node, data in brokers_network_table.items():
