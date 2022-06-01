@@ -22,6 +22,8 @@ public abstract class Broker<Pub, Sub> {
     private final Class<Pub> pubClass;
     private final Class<Sub> subClass;
 
+    private boolean isRoot;
+
     private final Map<Socket, Triple<BufferedReader, PrintWriter, List<Sub>>> subscribersMap;
     private final Object subscribersMapLock;
 
@@ -52,6 +54,8 @@ public abstract class Broker<Pub, Sub> {
         this.pubClass = pubClass;
         this.subClass = subClass;
 
+        this.isRoot = false;
+
         this.subscribersMap = new HashMap<>();
         this.subscribersMapLock = new Object();
 
@@ -71,6 +75,9 @@ public abstract class Broker<Pub, Sub> {
         this.startSubscribersServer();
 
         this.getBrokerPeerHostPort();
+        if (this.isRoot) {
+            return;
+        }
 
         this.connectToBrokerPeer();
     }
@@ -214,6 +221,12 @@ public abstract class Broker<Pub, Sub> {
         this.masterClientOut.println(this.subscribersServerSocket.getLocalPort());
 
         this.brokerPeerHost = this.masterClientIn.readLine();
+        if (Objects.equals(this.brokerPeerHost, MasterMessageType.NO_PARENT_PEER.getMessageType())) {
+            this.brokerPeerHost = null;
+            this.brokerPeerPort = -1;
+            this.isRoot = true;
+            return;
+        }
         this.brokerPeerPort = Integer.parseInt(this.masterClientIn.readLine());
     }
 
