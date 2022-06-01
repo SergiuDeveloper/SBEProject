@@ -14,7 +14,6 @@ public class SpecializedBroker extends Broker<Publication, Subscription> {
 
     @Override
     protected boolean publicationMatchesSubscription(Publication publication, Subscription subscription) {
-        /*
         SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy/MM/dd");
 
         Map<String, String> publicationValues = new HashMap<String, String>() {{
@@ -49,7 +48,7 @@ public class SpecializedBroker extends Broker<Publication, Subscription> {
                     return false;
                 }
             }
-        }*/
+        }
         return true;
     }
 }
