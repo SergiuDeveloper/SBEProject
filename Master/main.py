@@ -129,7 +129,7 @@ def handle_publisher(conn, addr):
     broker_key = list(brokers_network_table.keys())[publishers_round_robin_index]
     broker_host = broker_key[0]
     broker_port = brokers_network_table[broker_key]['ports'][1]
-    publishers_round_robin_index += 1
+    publishers_round_robin_index = (publishers_round_robin_index + 1) % len(brokers_network_table)
     publishers_round_robin_index_lock.release()
     brokers_network_table_lock.release()
     
@@ -154,7 +154,7 @@ def handle_subscriber(conn, addr):
     broker_key = list(brokers_network_table.keys())[subscribers_round_robin_index]
     broker_host = broker_key[0]
     broker_port = brokers_network_table[broker_key]['ports'][2]
-    subscribers_round_robin_index += 1
+    subscribers_round_robin_index = (subscribers_round_robin_index + 1) % len(brokers_network_table)
     subscribers_round_robin_index_lock.release()
     brokers_network_table_lock.release()
     

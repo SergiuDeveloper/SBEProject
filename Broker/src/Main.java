@@ -1,17 +1,12 @@
 import java.io.IOException;
-import java.security.InvalidParameterException;
 
 public class Main {
 
+    private static final String MASTER_HOST = "127.0.0.1";
+    private static final int MASTER_PORT = 8090;
+
     public static void main(String[] args) throws IOException {
-        if (args.length < 2) {
-            throw new InvalidParameterException("You must provide the master server host and port");
-        }
-
-        String masterHost = args[0];
-        int masterPort = Integer.parseInt(args[1]);
-
-        SpecializedBroker specializedBroker = new SpecializedBroker(masterHost, masterPort);
+        SpecializedBroker specializedBroker = new SpecializedBroker(MASTER_HOST, MASTER_PORT);
         specializedBroker.start();
     }
 }

@@ -126,8 +126,7 @@ public abstract class Broker<Pub, Sub> {
 
                     this.awaitBrokerPeerMessages(
                             new ImmutablePair<>(brokerPeerChildHost, brokerPeerChildPort),
-                            new ImmutableTriple<>(brokerPeerSocket, brokerPeerChildIn, brokerPeerChildOut),
-                            false
+                            new ImmutableTriple<>(brokerPeerSocket, brokerPeerChildIn, brokerPeerChildOut)
                     );
                 }).start();
             }
@@ -159,7 +158,7 @@ public abstract class Broker<Pub, Sub> {
                             e.printStackTrace();
                             continue;
                         }
-                        this.handlePublication(BrokerMessageType.TRANSMIT_PUBLICATION.getMessageType(), serializedPublication);
+                        this.handlePublication(null, BrokerMessageType.TRANSMIT_PUBLICATION.getMessageType(), serializedPublication);
                     }
                 }).start();
             }
@@ -193,10 +192,10 @@ public abstract class Broker<Pub, Sub> {
 
                 new Thread(() -> {
                     while (true) {
+                        String serializedSubscription;
                         Sub subscription;
                         try {
-                            String serializedSubscription = subscriberIn.readLine();
-                            System.out.println(serializedSubscription);
+                            serializedSubscription = subscriberIn.readLine();
                             subscription = new ObjectMapper().readValue(serializedSubscription, this.subClass);
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -205,6 +204,20 @@ public abstract class Broker<Pub, Sub> {
 
                         synchronized (this.subscribersMapLock) {
                             this.subscribersMap.get(subscriberSocket).getRight().add(subscription);
+                        }
+
+                        List<PrintWriter> peerWriters;
+                        synchronized (this.brokerPeersSocketsMapLock) {
+                            peerWriters = this.brokerPeersSocketsMap.values()
+                                    .stream()
+                                    .map(Triple::getRight).collect(Collectors.toList());
+                        }
+                        if (!this.isRoot) {
+                            peerWriters.add(this.brokerPeerOut);
+                        }
+
+                        for (PrintWriter peerWriter: peerWriters) {
+                            peerWriter.println(String.format("%s %s", BrokerMessageType.REGISTER_SUBSCRIPTION.getMessageType(), serializedSubscription));
                         }
                     }
                 }).start();
@@ -238,14 +251,15 @@ public abstract class Broker<Pub, Sub> {
 
         this.brokerPeerOut.println(this.brokerPeersServerSocket.getLocalPort());
 
+        this.routingTable.put(new ImmutablePair<>(this.brokerPeerHost, this.brokerPeerPort), new ArrayList<>());
+
         new Thread(() -> this.awaitBrokerPeerMessages(
                 new ImmutablePair<>(this.brokerPeerHost, brokerPeerPort),
-                new ImmutableTriple<>(this.brokerPeerClientSocket, this.brokerPeerIn, this.brokerPeerOut),
-                true
+                new ImmutableTriple<>(this.brokerPeerClientSocket, this.brokerPeerIn, this.brokerPeerOut)
         )).start();
     }
 
-    private void awaitBrokerPeerMessages(Pair<String, Integer> brokerPeerAddress, Triple<Socket, BufferedReader, PrintWriter> brokerPeerSocketData, boolean isParent) {
+    private void awaitBrokerPeerMessages(Pair<String, Integer> brokerPeerAddress, Triple<Socket, BufferedReader, PrintWriter> brokerPeerSocketData) {
         BufferedReader in = brokerPeerSocketData.getMiddle();
 
         //noinspection InfiniteLoopStatement
@@ -257,7 +271,8 @@ public abstract class Broker<Pub, Sub> {
                 e.printStackTrace();
                 continue;
             }
-            String[] messageArgs = message.split(" ", 1);
+
+            String[] messageArgs = message.split(" ", 2);
             if (messageArgs.length < 2) {
                 continue;
             }
@@ -265,29 +280,15 @@ public abstract class Broker<Pub, Sub> {
             String messageContent = messageArgs[1];
 
             if (Objects.equals(messageType, BrokerMessageType.REGISTER_SUBSCRIPTION.getMessageType())) {
-                this.handleSubscription(brokerPeerAddress, messageType, messageContent, isParent);
+                this.handleSubscription(brokerPeerAddress, messageType, messageContent);
             } else if (Objects.equals(messageType, BrokerMessageType.TRANSMIT_PUBLICATION.getMessageType())) {
-                this.handlePublication(messageType, messageContent);
+                this.handlePublication(brokerPeerAddress, messageType, messageContent);
             }
         }
     }
 
-    private List<Pair<String, Integer>> getBrokerPeersToAnnounce(Pair<String, Integer> brokerPeerAddress, boolean isParent) {
-        synchronized (this.brokerPeersSocketsMapLock) {
-            List<Pair<String, Integer>> brokersToAnnounce = this.brokerPeersSocketsMap.keySet()
-                    .stream()
-                    .filter(address -> !brokerPeerAddress.equals(address))
-                    .collect(Collectors.toList());
-            if (!isParent) {
-                brokersToAnnounce.add(new ImmutablePair<>(this.brokerPeerHost, this.brokerPeerPort));
-            }
-            return brokersToAnnounce;
-        }
-    }
-
-    private void handleSubscription(Pair<String, Integer> brokerPeerAddress, String messageType, String messageContent, boolean isParent) {
-        List<Pair<String, Integer>> brokerPeersToAnnounce = this.getBrokerPeersToAnnounce(brokerPeerAddress, isParent);
-
+    @SuppressWarnings("DuplicatedCode")
+    private void handleSubscription(Pair<String, Integer> brokerPeerAddress, String messageType, String messageContent) {
         Sub subscription;
         try {
             subscription = new ObjectMapper().readValue(messageContent, this.subClass);
@@ -296,19 +297,41 @@ public abstract class Broker<Pub, Sub> {
             return;
         }
 
-        synchronized (this.brokerPeersSocketsMapLock) {
-            for (Pair<String, Integer> brokerAddress: brokerPeersToAnnounce) {
-                PrintWriter brokerOut = this.brokerPeersSocketsMap.get(brokerAddress).getRight();
-                brokerOut.println(String.format("%s %s", messageType, messageContent));
-            }
-        }
-
         synchronized (this.routingTableLock) {
             this.routingTable.get(brokerPeerAddress).add(subscription);
         }
+
+        // Route subscription to peers
+        List<Pair<String, Integer>> eligiblePeerAddresses;
+        synchronized (this.routingTableLock) {
+            eligiblePeerAddresses = new ArrayList<>(this.routingTable.keySet());
+        }
+        List<PrintWriter> eligiblePeerWriters;
+        synchronized (this.brokerPeersSocketsMapLock) {
+            eligiblePeerWriters = eligiblePeerAddresses
+                    .stream()
+                    .filter(address -> {
+                        if (brokerPeerAddress == null) {
+                            return true;
+                        }
+                        return (!(Objects.equals(address.getLeft(), brokerPeerAddress.getLeft()) && Objects.equals(address.getRight(), brokerPeerAddress.getRight())));
+                    })
+                    .map(address -> {
+                        if (Objects.equals(address.getLeft(), this.brokerPeerHost) && address.getRight() == this.brokerPeerPort) {
+                            return this.brokerPeerOut;
+                        } else {
+                            return this.brokerPeersSocketsMap.get(address).getRight();
+                        }
+                    })
+                    .collect(Collectors.toList());
+        }
+        for (PrintWriter eligiblePeerWriter: eligiblePeerWriters) {
+            eligiblePeerWriter.println(String.format("%s %s", messageType, messageContent));
+        }
     }
 
-    private void handlePublication(String messageType, String messageContent) {
+    @SuppressWarnings("DuplicatedCode")
+    private void handlePublication(Pair<String, Integer> brokerPeerAddress, String messageType, String messageContent) {
         Pub publication;
         try {
             publication = new ObjectMapper().readValue(messageContent, this.pubClass);
@@ -346,6 +369,12 @@ public abstract class Broker<Pub, Sub> {
         synchronized (this.brokerPeersSocketsMapLock) {
             eligiblePeerWriters = eligiblePeerAddresses
                     .stream()
+                    .filter(address -> {
+                        if (brokerPeerAddress == null) {
+                            return true;
+                        }
+                        return (!(Objects.equals(address.getLeft(), brokerPeerAddress.getLeft()) && Objects.equals(address.getRight(), brokerPeerAddress.getRight())));
+                    })
                     .map(address -> {
                         if (Objects.equals(address.getLeft(), this.brokerPeerHost) && address.getRight() == this.brokerPeerPort) {
                             return this.brokerPeerOut;
