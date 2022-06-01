@@ -104,7 +104,7 @@ public abstract class Broker<Pub, Sub> {
                     try {
                         brokerPeerChildIn = new BufferedReader(new InputStreamReader(brokerPeerSocket.getInputStream()));
                         brokerPeerChildOut = new PrintWriter(brokerPeerSocket.getOutputStream(), true);
-                        brokerPeerChildHost = ((InetSocketAddress) brokerPeerSocket.getRemoteSocketAddress()).getAddress().toString();
+                        brokerPeerChildHost = ((InetSocketAddress) brokerPeerSocket.getRemoteSocketAddress()).getAddress().toString().substring(1);
                         brokerPeerChildPort = Integer.parseInt(brokerPeerChildIn.readLine());
                     } catch (IOException e) {
                         e.printStackTrace();

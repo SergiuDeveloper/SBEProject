@@ -1,4 +1,9 @@
 import socket
+import dash
+import visdcc
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output, State
 from threading import Thread, Lock
 
 
@@ -172,6 +177,120 @@ def select_optimal_peer(brokers_network_table):
     return None
 
 
+app = dash.Dash()
+app.layout = html.Div(
+    style={
+        'backgroundColor': '#1c1c1c'
+    },
+    children=[
+        visdcc.Network(
+            id='network',
+            data={
+                'nodes': [],
+                'edges': []
+            },
+            options={
+                'width': '1000px',
+                'height': '1000px'
+            },
+            style={
+                'background-color': 'white',
+                'margin': '0px'
+            }
+        ),
+        dcc.Interval(id='update_network_data', interval=5 * 1000, n_intervals=0)
+    ]
+)
+
+@app.callback(
+    Output('network', 'data'),
+    [Input('update_network_data', 'n_intervals')]
+)
+def update_network_data(n_intervals):
+    global brokers_network_table_lock
+    global brokers_network_table
+    
+    brokers_network_table_lock.acquire()
+    
+    nodes = [{
+            'id': str(key),
+            'label': 'B',
+            'color': 'red',
+            'labelHighlightBold': True,
+            'shape': 'dot',
+            'size': 15,
+            'physics': True
+        } for key, data in brokers_network_table.items()
+    ]
+    publisher_nodes = [{
+            'id': '{}pub{}'.format(str(key), str(i)),
+            'label': 'P',
+            'color': 'green',
+            'labelHighlightBold': True,
+            'shape': 'dot',
+            'size': 15,
+            'physics': True
+        } for key, data in brokers_network_table.items() for i in range(data['publishers'])
+    ]
+    subscriber_nodes = [{
+            'id': '{}sub{}'.format(str(key), str(i)),
+            'label': 'S',
+            'color': 'blue',
+            'labelHighlightBold': True,
+            'shape': 'dot',
+            'size': 15,
+            'physics': True
+        } for key, data in brokers_network_table.items() for i in range(data['subscribers'])
+    ]
+    nodes.extend(publisher_nodes)
+    nodes.extend(subscriber_nodes)
+    
+    edges = [{
+            'id': '{}-{}'.format(str(key), str(peer_key)),
+            'from': str(key),
+            'to': str(peer_key),
+            'width': 1,
+            'color': {
+                'color': 'black',
+                'inherit': False
+            },
+            'physics': True
+        } for key, data in brokers_network_table.items() for peer_key in data['peers'] 
+    ]
+    publisher_edges = [{
+            'id': '{}-{}'.format(str(key), '{}pub{}'.format(str(key), str(i))),
+            'from': str(key),
+            'to': '{}pub{}'.format(str(key), str(i)),
+            'width': 1,
+            'color': {
+                'color': 'black',
+                'inherit': False
+            },
+            'physics': True
+        } for key, data in brokers_network_table.items() for i in range(data['publishers'])
+    ]
+    subscriber_edges = [{
+            'id': '{}-{}'.format(str(key), '{}sub{}'.format(str(key), str(i))),
+            'from': str(key),
+            'to': '{}sub{}'.format(str(key), str(i)),
+            'width': 1,
+            'color': {
+                'color': 'black',
+                'inherit': False
+            },
+            'physics': True
+        } for key, data in brokers_network_table.items() for i in range(data['subscribers'])
+    ]
+    edges.extend(publisher_edges)
+    edges.extend(subscriber_edges)
+    
+    brokers_network_table_lock.release()
+    return {
+        'nodes': nodes,
+        'edges': edges
+    }
+
+
 if __name__ == '__main__':
     run_broker_server_thread = Thread(target=run_broker_server)
     run_broker_server_thread.start()
@@ -181,3 +300,5 @@ if __name__ == '__main__':
     
     run_subscriber_server_thread = Thread(target=run_subscriber_server)
     run_subscriber_server_thread.start()
+    
+    app.run_server(host='0.0.0.0')
