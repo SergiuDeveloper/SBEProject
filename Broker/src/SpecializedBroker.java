@@ -29,23 +29,41 @@ public class SpecializedBroker extends Broker<Publication, Subscription> {
             String publicationValue = publicationValues.get(condition.getField());
 
             switch (condition.getOperator()) {
-                case "=": if (!Objects.equals(publicationValue, conditionValue)) {
-                    return false;
+                case "=": {
+                    if (!Objects.equals(publicationValue, conditionValue)) {
+                        return false;
+                    }
+                    break;
                 }
-                case "!=": if (Objects.equals(publicationValue, conditionValue)) {
-                    return false;
+                case "!=": {
+                    if (Objects.equals(publicationValue, conditionValue)) {
+                        return false;
+                    }
+                    break;
                 }
-                case "<": if (publicationValue.compareTo(conditionValue) >= 0) {
-                    return false;
+                case "<": {
+                    if (publicationValue.compareTo(conditionValue) >= 0) {
+                        return false;
+                    }
+                    break;
                 }
-                case ">": if (publicationValue.compareTo(conditionValue) <= 0) {
-                    return false;
+                case ">": {
+                    if (publicationValue.compareTo(conditionValue) <= 0) {
+                        return false;
+                    }
+                    break;
                 }
-                case "<=": if (publicationValue.compareTo(conditionValue) > 0) {
-                    return false;
+                case "<=": {
+                    if (publicationValue.compareTo(conditionValue) > 0) {
+                        return false;
+                    }
+                    break;
                 }
-                case ">=": if (publicationValue.compareTo(conditionValue) < 0) {
-                    return false;
+                case ">=": {
+                    if (publicationValue.compareTo(conditionValue) < 0) {
+                        return false;
+                    }
+                    break;
                 }
             }
         }
