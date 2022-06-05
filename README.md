@@ -1,12 +1,9 @@
 # EBS Project
-https://profs.info.uaic.ro/~eonica/ebs/eval.html#projects
-
-
-## Members
-- Nistor Marian-Sergiu
-- Popa Stefan
+![plot](./network.png)
 
 ## Requirements
+https://profs.info.uaic.ro/~eonica/ebs/eval.html#projects
+
 Implementati o arhitectura de sistem publish/subscribe, content-based, structurata in felul urmator:
 - Generati un flux de publicatii care sa fie emis de 1-2 noduri publisher. Publicatiile pot fi generate cu valori aleatoare pentru campuri folosind generatorul de date din tema practica. (5 puncte)
 - Implementati o retea (overlay) de 2-3 brokeri care sa stocheze subscriptii primite de la clienti (subscriberi) si sa-i notifice pe acestia in functie de o filtrare bazata pe continutul publicatiilor. (10 puncte)

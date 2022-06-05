@@ -34,7 +34,7 @@ def connect_to_broker(broker_host, broker_port):
         conn_file = sock.makefile(mode='rw', encoding='utf-8')
         
         subscriptions_generator = generate_subscriptions(
-            10,
+            3333,
             {
                 'company': 0.2,
                 'value': 0.2,

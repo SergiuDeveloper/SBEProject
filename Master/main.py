@@ -1,3 +1,5 @@
+import os
+import time
 import socket
 import dash
 import visdcc
@@ -19,6 +21,8 @@ SUBSCRIBER_SERVER_PORT = 8092
 REGISTER_BROKER = 'REGISTER_BROKER'
 REGISTER_SUBSCRIBER = 'REGISTER_SUBSCRIBER'
 REGISTER_PUBLISHER = 'REGISTER_PUBLISHER'
+ANNOUNCE_SUBSCRIPTION = 'ANNOUNCE_SUBSCRIPTION'
+ANNOUNCE_PUBLICATION = 'ANNOUNCE_PUBLICATION'
 NO_PARENT_PEER = 'NO_PARENT_PEER'
 
 BROKER_PEERS_LIMIT = 2
@@ -35,6 +39,9 @@ publishers_round_robin_index_lock = Lock()
 
 subscribers_round_robin_index = 0
 subscribers_round_robin_index_lock = Lock()
+
+log_file = open('log.txt', 'w')
+log_file_lock = Lock()
 
 
 def run_broker_server():
@@ -118,6 +125,14 @@ def handle_broker(conn, addr):
             brokers_network_table[(broker_address, broker_broker_server_port)]['publishers'] += 1
         elif request_parts[0] == REGISTER_SUBSCRIBER:
             brokers_network_table[(broker_address, broker_broker_server_port)]['subscribers'] += 1
+        elif request_parts[0] == ANNOUNCE_SUBSCRIPTION:
+            log_file_lock.acquire()
+            print('{} SUBSCRIPTION {}'.format(time.time(), request_parts[1]), file=log_file)
+            log_file_lock.release()
+        elif request_parts[0] == ANNOUNCE_PUBLICATION:
+            log_file_lock.acquire()
+            print('{} PUBLICATION {}'.format(time.time(), request_parts[1]), file=log_file)
+            log_file_lock.release()
         brokers_network_table_lock.release()
         
 def handle_publisher(conn, addr):

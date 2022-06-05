@@ -159,6 +159,8 @@ public abstract class Broker<Pub, Sub> {
                             continue;
                         }
                         this.handlePublication(null, BrokerMessageType.TRANSMIT_PUBLICATION.getMessageType(), serializedPublication);
+
+                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.ANNOUNCE_PUBLICATION, serializedPublication.replaceAll("\\s+","")));
                     }
                 }).start();
             }
@@ -219,6 +221,8 @@ public abstract class Broker<Pub, Sub> {
                         for (PrintWriter peerWriter: peerWriters) {
                             peerWriter.println(String.format("%s %s", BrokerMessageType.REGISTER_SUBSCRIPTION.getMessageType(), serializedSubscription));
                         }
+
+                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.ANNOUNCE_SUBSCRIPTION, serializedSubscription.replaceAll("\\s+","")));
                     }
                 }).start();
             }
