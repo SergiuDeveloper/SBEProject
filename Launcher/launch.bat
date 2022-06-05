@@ -43,7 +43,7 @@ if "%benchmark%" == "" (
 )
 
 echo Performing benchmark for 3 minutes
-timeout 10
+timeout 180
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Master*"
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Broker*"
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Publisher*"
