@@ -160,7 +160,7 @@ public abstract class Broker<Pub, Sub> {
                         }
                         this.handlePublication(null, BrokerMessageType.TRANSMIT_PUBLICATION.getMessageType(), serializedPublication);
 
-                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.ANNOUNCE_PUBLICATION, serializedPublication.replaceAll("\\s+","")));
+                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.PUBLICATION_IN, serializedPublication.replaceAll("\\s+","")));
                     }
                 }).start();
             }
@@ -222,7 +222,7 @@ public abstract class Broker<Pub, Sub> {
                             peerWriter.println(String.format("%s %s", BrokerMessageType.REGISTER_SUBSCRIPTION.getMessageType(), serializedSubscription));
                         }
 
-                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.ANNOUNCE_SUBSCRIPTION, serializedSubscription.replaceAll("\\s+","")));
+                        this.masterClientOut.println(String.format("%s %s", MasterMessageType.SUBSCRIPTION_IN, serializedSubscription.replaceAll("\\s+","")));
                     }
                 }).start();
             }
@@ -357,6 +357,8 @@ public abstract class Broker<Pub, Sub> {
         }
         for (PrintWriter eligibleSubscriberWriter: eligibleSubscriberWriters) {
             eligibleSubscriberWriter.println(messageContent);
+
+            this.masterClientOut.println(String.format("%s %s", MasterMessageType.PUBLICATION_OUT, messageContent.replaceAll("\\s+","")));
         }
 
         // Route publication to peers
