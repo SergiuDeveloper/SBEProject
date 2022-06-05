@@ -1,24 +1,25 @@
 @echo off
 setlocal enabledelayedexpansion
 
-if %1 == "" (
+if "%1" == "" (
 	goto invalid
 )
-if %2 == "" (
+if "%2" == "" (
 	goto invalid
 )
-if %3 == "" (
+if "%3" == "" (
 	goto invalid
 )
 
 set brokersCount=%1
 set publishersCount=%2
 set subscribersCount=%3
+set benchmark=%4
 
 echo Launching %brokersCount% brokers, %publishersCount% publishers, and %subscribersCount% subscribers
 
 start "Master" cmd /K "cd ../Master && python3 main.py"
-timeout 1
+timeout 2
 for /l %%x in (1, 1, %brokersCount%) do (
 	echo Launching Broker #%%x
 	start "Broker" cmd /K "cd ../Broker/out/artifacts/Broker_jar && java -jar Broker.jar"
@@ -37,7 +38,12 @@ for /l %%x in (1, 1, %publishersCount%) do (
 	timeout 2
 )
 
-timeout 180
+if "%benchmark%" == "" (
+	goto end
+)
+
+echo Performing benchmark for 3 minutes
+timeout 10
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Master*"
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Broker*"
 taskkill /IM cmd.exe /FI "WINDOWTITLE eq Publisher*"
@@ -46,6 +52,6 @@ taskkill /IM cmd.exe /FI "WINDOWTITLE eq Subscriber*"
 goto end
 	
 :invalid
-	echo Invalid number of parameters. Expected format: {brokers} {publishers} {subscribers}
+	echo Invalid number of parameters. Expected format: {brokers} {publishers} {subscribers} {benchmark: optional}
 	
 :end
