@@ -87,5 +87,3 @@ if __name__ == '__main__':
     print('Arrived publications: {:,}'.format(analysis_100['arrived_publications']))
     print('Matching rate: {:.2f}%'.format(analysis_100['matching_rate'] * 100))
     print('Mean latency: {:.2f} seconds'.format(analysis_100['mean_latency']))
-    
-    print()
